@@ -15,9 +15,11 @@ import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
 import org.json.JSONArray;
+import org.passay.*;
 
 import java.io.*;
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.ResourceBundle;
@@ -31,10 +33,10 @@ public class UsuarioNormal extends Usuario implements Initializable{
     private Label archivocargado, labelUsuario;
 
     @FXML
-    private AnchorPane draggable;
+    private AnchorPane draggable, parentPane;
 
     public String imagepath="vacio397";
-    private String ip = "35.188.127.60";
+    private String ip = "35.188.100.206";
     private String puerto = "8080";
     private String urlRaiz = "http://" + ip + ":" + puerto;
 
@@ -88,7 +90,29 @@ public class UsuarioNormal extends Usuario implements Initializable{
     }
 
     public void cuentaAceptar(MouseEvent event){
-        panelConfirmarCuenta.setVisible(true);
+        if(!txtNuevoPass.getText().isEmpty()){
+            List<Rule> rules = new ArrayList();
+            rules.add(new LengthRule(8));
+            rules.add(new CharacterRule(EnglishCharacterData.UpperCase, 1));
+            rules.add(new CharacterRule(EnglishCharacterData.LowerCase, 1));
+            rules.add(new CharacterRule(EnglishCharacterData.Digit, 2));
+            rules.add(new CharacterRule(EnglishCharacterData.Special, 1));
+            PasswordValidator validator = new PasswordValidator(rules);
+            PasswordData password = new PasswordData(txtNuevoPass.getText());
+            RuleResult result = validator.validate(password);
+            if(!result.isValid()){
+                labelCuentaError.setText("La contraseña debe seguir los estandares impuestos");
+                paneCuentaError.setVisible(true);
+            }
+            panelConfirmarCuenta.setVisible(true);
+        }else{
+            if(!txtCorreo.getText().isEmpty()){
+                panelConfirmarCuenta.setVisible(true);
+            }else{
+                labelCuentaError.setText("No ha introducido ningun valor");
+                paneCuentaError.setVisible(true);
+            }
+        }
     }
 
     public void cerrarPopupCuenta(MouseEvent event){
@@ -214,5 +238,10 @@ public class UsuarioNormal extends Usuario implements Initializable{
 
     public void recargarComentarios(MouseEvent event) throws IOException {
         cargarTabla();
+    }
+
+    public void btnCerrarSesion(MouseEvent event) throws IOException {
+        helper.show("logIn.fxml", parentPane);
+        UsuarioEntity.destroy();
     }
 }

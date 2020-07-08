@@ -42,8 +42,8 @@ public class Helper {
         stage.initModality(Modality.NONE);
         stage.setScene(scene);
         stage.setTitle("KitchenWorksDesktop");
-        //stage.getIcons().add(new Image("\\images\\cubiertos.ico"));
-        //primaryStage.getIcons().add(new Image(getClass().getResourceAsStream("images/cubiertos.png")));
+        //stage.getIcons().add(new Image("\\images\\cubiertos.png"));
+        stage.getIcons().add(new Image(getClass().getResourceAsStream("images/cubiertos.png")));
         stage.show();
         Stage myStage = (Stage) parentPane.getScene().getWindow();
         myStage.close();

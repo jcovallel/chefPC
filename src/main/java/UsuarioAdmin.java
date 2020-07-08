@@ -1,4 +1,6 @@
 
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.scene.control.*;
@@ -7,9 +9,12 @@ import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.AnchorPane;
 import org.json.JSONArray;
+import org.passay.*;
 
 import java.io.*;
 import java.net.URL;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.ResourceBundle;
 
 public class UsuarioAdmin extends Usuario implements Initializable{
@@ -17,13 +22,21 @@ public class UsuarioAdmin extends Usuario implements Initializable{
     private TextField txtNuevoNombre, txtNuevoCorreo, txtNuevoRestaurante, txtEditarCorreo2;
 
     @FXML
-    private AnchorPane paneEditarRestaurante, paneAgregarRestaurante, paneEliminarRestaurante;
+    private AnchorPane paneEditarRestaurante, paneAgregarRestaurante, paneEliminarRestaurante, paneSinPermisos, parentPane;
 
     @FXML
     private ListView listaRestaurante, listaRestauranteComent;
 
     @FXML
+    private ComboBox comboboxRol;
+
+    @FXML
+    private Label labelRestaurantes;
+
+    @FXML
     ImageView btnEditar, btnEliminar, btnAgregar;
+
+    ObservableList<String> listaRoles = FXCollections.observableArrayList();
 
     @Override
     public void tabComentarios() throws IOException {
@@ -32,6 +45,9 @@ public class UsuarioAdmin extends Usuario implements Initializable{
 
 
     public void tabRestaurantes() throws IOException {
+        if(UsuarioEntity.getRol().equals(1)){
+            labelRestaurantes.setText("Restaurantes y supervisores");
+        }
         btnEliminar.setVisible(false);
         btnEditar.setVisible(false);
     }
@@ -49,7 +65,29 @@ public class UsuarioAdmin extends Usuario implements Initializable{
 
 
     public void cuentaAceptarMouseClicked(MouseEvent event){
-        panelConfirmarCuenta.setVisible(true);
+        if(!txtNuevoPass.getText().isEmpty()){
+            List<Rule> rules = new ArrayList();
+            rules.add(new LengthRule(8));
+            rules.add(new CharacterRule(EnglishCharacterData.UpperCase, 1));
+            rules.add(new CharacterRule(EnglishCharacterData.LowerCase, 1));
+            rules.add(new CharacterRule(EnglishCharacterData.Digit, 2));
+            rules.add(new CharacterRule(EnglishCharacterData.Special, 1));
+            PasswordValidator validator = new PasswordValidator(rules);
+            PasswordData password = new PasswordData(txtNuevoPass.getText());
+            RuleResult result = validator.validate(password);
+            if(!result.isValid()){
+                labelCuentaError.setText("La contraseña debe seguir los estandares impuestos");
+                paneCuentaError.setVisible(true);
+            }
+            panelConfirmarCuenta.setVisible(true);
+        }else{
+            if(!txtCorreo.getText().isEmpty()){
+                panelConfirmarCuenta.setVisible(true);
+            }else{
+                labelCuentaError.setText("No ha introducido ningun valor");
+                paneCuentaError.setVisible(true);
+            }
+        }
     }
 
 
@@ -93,60 +131,76 @@ public class UsuarioAdmin extends Usuario implements Initializable{
     }
 
     public void okAgregarRestaurante(MouseEvent event) {
-
+        Integer rol = 0;
+        if(comboboxRol.getValue().toString().equals("Supervisor")){
+            rol = 2;
+        }
+        else if(comboboxRol.getValue().toString().equals("Administrador contrato")){
+            rol = 3;
+        }
+        else{
+            helper.showAlert("Debe seleccionar un rol", Alert.AlertType.ERROR);
+        }
         try {
-            rest.POST(
-                    routes.getRoute(Routes.routesName.CREATE_USUARIO),
-                    "nombre", txtNuevoRestaurante.getText(),
-                    "nombreid", txtNuevoRestaurante.getText(),
-                    "correo", txtNuevoCorreo.getText(),
-                    "password", helper.hash(helper.defaultPass));
-            rest.PUT(
-                    routes.getRoute(
-                            Routes.routesName.MODIFY_DISPONIBILIDAD,
-                            UsuarioEntity.getNombre()
-                    ),
-                    "empresaid", txtNuevoRestaurante.getText(),
-                    "empresa", txtNuevoRestaurante.getText(),
-                    "Lunes", "0",
-                    "Martes", "0",
-                    "Miercoles", "0",
-                    "Jueves", "0",
-                    "Viernes", "0"
-            );
-            String[] dias = {"Lunes", "Martes", "Miércoles", "Jueves", "Viernes"};
-            for(String diasIterator : dias){
+            JSONArray jsonArray = rest.GET(routes.getRoute(Routes.routesName.GET_ROL,UsuarioEntity.getNombre(), rol.toString()));
+            if(jsonArray.getJSONObject(0).get("acceso").equals("false")){
+                paneSinPermisos.setVisible(true);
+            }
+            else{
                 rest.POST(
-                        routes.getRoute(Routes.routesName.CREATE_HOURS),
-                        "id", txtNuevoRestaurante.getText() + diasIterator,
-                        "empresa", txtNuevoRestaurante.getText(),
-                        "dia", diasIterator,
-                        "franja1", "0",
-                        "franja2", "0",
-                        "franja3", "0",
-                        "franja4", "0",
-                        "franja5", "0",
-                        "franja6", "0",
-                        "franja7", "0",
-                        "franja8", "0",
-                        "franja9", "0",
-                        "franja10", "0",
-                        "franja11", "0",
-                        "franja12", "0",
-                        "franja13", "0",
-                        "franja14", "0",
-                        "franja15", "0",
-                        "franja16", "0",
-                        "franja17", "0",
-                        "franja18", "0",
-                        "franja19", "0",
-                        "franja20", "0"
+                        routes.getRoute(Routes.routesName.CREATE_USUARIO),
+                        "nombre", txtNuevoRestaurante.getText(),
+                        "nombreid", txtNuevoRestaurante.getText(),
+                        "correo", txtNuevoCorreo.getText(),
+                        "password", helper.hash(helper.defaultPass),
+                        "rol", rol.toString()
                 );
+                rest.PUT(
+                        routes.getRoute(
+                                Routes.routesName.MODIFY_DISPONIBILIDAD,
+                                UsuarioEntity.getNombre()
+                        ),
+                        "empresaid", txtNuevoRestaurante.getText(),
+                        "empresa", txtNuevoRestaurante.getText(),
+                        "Lunes", "0",
+                        "Martes", "0",
+                        "Miercoles", "0",
+                        "Jueves", "0",
+                        "Viernes", "0"
+                );
+                String[] dias = {"Lunes", "Martes", "Miércoles", "Jueves", "Viernes"};
+                for(String diasIterator : dias){
+                    rest.POST(
+                            routes.getRoute(Routes.routesName.CREATE_HOURS),
+                            "id", txtNuevoRestaurante.getText() + diasIterator,
+                            "empresa", txtNuevoRestaurante.getText(),
+                            "dia", diasIterator,
+                            "franja1", "0",
+                            "franja2", "0",
+                            "franja3", "0",
+                            "franja4", "0",
+                            "franja5", "0",
+                            "franja6", "0",
+                            "franja7", "0",
+                            "franja8", "0",
+                            "franja9", "0",
+                            "franja10", "0",
+                            "franja11", "0",
+                            "franja12", "0",
+                            "franja13", "0",
+                            "franja14", "0",
+                            "franja15", "0",
+                            "franja16", "0",
+                            "franja17", "0",
+                            "franja18", "0",
+                            "franja19", "0",
+                            "franja20", "0"
+                    );
+                }
             }
         } catch (IOException e) {
             helper.showAlert("Ocurrió un error inesperado", Alert.AlertType.ERROR);
         }
-
         cargarLista();
         listaRestaurante.setDisable(false);
         paneAgregarRestaurante.setVisible(false);
@@ -175,6 +229,30 @@ public class UsuarioAdmin extends Usuario implements Initializable{
                         listaRestaurante.getSelectionModel().getSelectedItem().toString()
                 )
         );
+        rest.GET(
+                routes.getRoute(
+                        Routes.routesName.DELETE_COMENTS,
+                        listaRestaurante.getSelectionModel().getSelectedItem().toString()
+                )
+        );
+        rest.GET(
+                routes.getRoute(
+                        Routes.routesName.DELETE_DMODEL,
+                        listaRestaurante.getSelectionModel().getSelectedItem().toString()
+                )
+        );
+        rest.GET(
+                routes.getRoute(
+                        Routes.routesName.DELETE_DHMODEL,
+                        listaRestaurante.getSelectionModel().getSelectedItem().toString()
+                )
+        );
+        rest.GET(
+                routes.getRoute(
+                        Routes.routesName.DELETE_DISPOMODEL,
+                        listaRestaurante.getSelectionModel().getSelectedItem().toString()
+                )
+        );
         cargarLista();
     }
 
@@ -196,7 +274,7 @@ public class UsuarioAdmin extends Usuario implements Initializable{
             tableCalificacion.getItems().clear();
             String empresa = listaRestauranteComent.getSelectionModel().getSelectedItem().toString();
 
-            if(empresa.equals("Administrador")){
+            if(empresa.equals("Todos los comentarios")){
                 cargarTabla(Routes.routesName.GET_REVIEWS_ADMIN);
             }
             else{
@@ -216,28 +294,44 @@ public class UsuarioAdmin extends Usuario implements Initializable{
         if(!listaRestauranteComent.getItems().isEmpty()){
             listaRestauranteComent.getItems().clear();
         }
-        JSONArray jsonArray;
         try{
-            jsonArray = rest.GET(routes.getRoute(Routes.routesName.GET_USUARIOS));
-            if(jsonArray != null){
+            JSONArray jsonArray2 = null;
+            //jsonArray2 es el que llena la lista de restaurantes y supervisores
+            if(UsuarioEntity.getRol().equals(1)){
+                jsonArray2 = rest.GET(routes.getRoute(Routes.routesName.GET_USUARIOS));
+            }
+            else{
+                jsonArray2 = rest.GET(routes.getRoute(Routes.routesName.GET_USUARIOS_ROL3));
+            }
+            JSONArray jsonArray = rest.GET(routes.getRoute(Routes.routesName.GET_USUARIOS_ROL3));
+
+            if(jsonArray != null && jsonArray2 != null){
                 for(int i = 0; i < jsonArray.length(); i++){
-                    listaRestaurante.getItems().add((String) jsonArray.getJSONObject(i).get("nombre"));
                     listaRestauranteComent.getItems().add((String) jsonArray.getJSONObject(i).get("nombre"));
                 }
-                listaRestaurante.getItems().remove((String) "Administrador");
-                listaRestauranteComent.getItems().remove((String) "Administrador");
+                for(int i = 0; i < jsonArray2.length(); i++){
+                    listaRestaurante.getItems().add((String) jsonArray2.getJSONObject(i).get("nombre"));
+                }
+                try{
+                    listaRestaurante.getItems().remove((String) "Administrador");
+                    listaRestauranteComent.getItems().remove((String) "Administrador");
+                }
+                catch(Exception e){
+
+                }
             }
         }
         catch(IOException ioe){
             helper.showAlert("Ocurrió un error inesperado", Alert.AlertType.ERROR);
         }
-        listaRestauranteComent.getItems().add("Administrador");
+
         listaRestaurante.getItems().sort((Object c1, Object c2) -> {
             return c1.toString().compareTo((String) c2);
         });
         listaRestauranteComent.getItems().sort((Object c1, Object c2) -> {
             return c1.toString().compareTo((String) c2);
         });
+        listaRestauranteComent.getItems().add("Todos los comentarios");
     }
 
     protected void cargarTabla(Routes.routesName route, String... args) throws IOException {
@@ -274,7 +368,20 @@ public class UsuarioAdmin extends Usuario implements Initializable{
 
     @Override
     public void initialize(URL location, ResourceBundle resources) {
+        listaRoles.add("Supervisor");
+        listaRoles.add("Administrador contrato");
+        this.comboboxRol.setItems(listaRoles);
+
         cargarLista();
+    }
+
+    public void okSinPermisos(MouseEvent event) {
+        paneSinPermisos.setVisible(false);
+    }
+
+    public void btnCerrarSesion(MouseEvent event) throws IOException {
+        helper.show("logIn.fxml", parentPane);
+        UsuarioEntity.destroy();
     }
 }
 

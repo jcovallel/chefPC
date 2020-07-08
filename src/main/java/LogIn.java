@@ -53,18 +53,25 @@ public class LogIn extends Application implements Initializable{
                 paneError.setVisible(true);
             }
             if(jsonArray != null){
+                if(jsonArray.getJSONObject(0).get("acceso").toString().equals("true")){
+                    Integer rol = 0;
+                    jsonArray = rest.GET(routes.getRoute(Routes.routesName.GET_ROL, comboboxUsuario.getValue()));
+                    rol = (Integer) jsonArray.getJSONObject(0).get("response");
+                    UsuarioEntity.getUsuario(comboboxUsuario.getValue(), rol);
 
-                if(jsonArray.getJSONObject(0).get("acceso").toString().contains("true")){
-                    UsuarioEntity.getUsuario(comboboxUsuario.getValue());
                     if(helper.hash(txtPass.getText()).equals(helper.hash(helper.defaultPass))){
                         helper.show("cambioPass.fxml", parentPane);
                     }
                     else{
-                        if(comboboxUsuario.getValue().equals("Administrador")){
+                        if(jsonArray.getJSONObject(0).get("response").toString().equals("2") || jsonArray.getJSONObject(0).get("response").toString().equals("1")){
                             helper.show("usuarioAdmin.fxml", parentPane);
                         }
-                        else{
+                        else if(jsonArray.getJSONObject(0).get("response").toString().equals("3")){
                             helper.show("usuarioNormal.fxml", parentPane);
+                        }
+                        else{
+                            labelError.setText("Ocurrió un error inesperado");
+                            paneError.setVisible(true);
                         }
                     }
                 }
@@ -75,7 +82,6 @@ public class LogIn extends Application implements Initializable{
 
             }
             else{
-                labelError.setText("Ocurrió un error inesperado");
                 paneError.setVisible(true);
             }
         }
