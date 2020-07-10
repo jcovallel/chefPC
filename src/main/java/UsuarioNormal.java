@@ -36,7 +36,7 @@ public class UsuarioNormal extends Usuario implements Initializable{
     private AnchorPane draggable, parentPane;
 
     public String imagepath="vacio397";
-    private String ip = "35.188.100.206";
+    private String ip = "35.188.211.209";
     private String puerto = "8080";
     private String urlRaiz = "http://" + ip + ":" + puerto;
 
